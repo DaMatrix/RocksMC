@@ -1,0 +1,18 @@
+[
+  {
+    "modid": "rocksmc",
+    "name": "RocksMC",
+    "description": "A fast and compact world storage format for Cubic Chunks worlds, based on RocksDB.",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "url": "https://daporkchop.net",
+    "updateUrl": "",
+    "authorList": [
+      "DaPorkchop_"
+    ],
+    "credits": "Barteks2x - Cubic Chunks dev",
+    "logoFile": "",
+    "screenshots": [],
+    "dependencies": []
+  }
+]

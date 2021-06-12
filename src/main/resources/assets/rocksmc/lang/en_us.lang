@@ -1,0 +1,3 @@
+rocksmc.error.cannot_parse_dim=Unable to parse dimension ID: %s
+rocksmc.error.cannot_find_dim=Unable to find dimension: %s
+rocksmc.error.not_rockscc=Dimension %s isn't using RocksMC!

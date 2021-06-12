@@ -1,0 +1,101 @@
+buildscript {
+    repositories {
+        maven {
+            name = "Minecraft Forge"
+            url = "https://files.minecraftforge.net/maven"
+        }
+    }
+    dependencies {
+        classpath "net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT"
+    }
+}
+apply plugin: "net.minecraftforge.gradle.forge"
+
+ext {
+    //general things
+    javaVersion = "1.8"
+    rocksccVersion = "0.0.1." + ('git rev-list --count HEAD'.execute().text.trim()) + "-1.12.2"
+
+    //minecraft things
+    mcpmappingsVersion = "stable_39"
+    minecraftforgeVersion = "14.23.5.2847"
+    minecraftVersion = "1.12.2"
+
+    //dependency things
+    cubicchunksVersion = "d44ef17517"
+    forgerocksVersion = "6.13.3-1.12.2"
+    junitVersion = "4.12"
+    leveldbVersion = "0.0.10-SNAPSHOT"
+    lombokVersion = "1.18.16"
+    rocksdbVersion = "6.13.3"
+}
+
+version = "$rocksccVersion"
+group = "net.daporkchop"
+
+compileJava {
+    sourceCompatibility = targetCompatibility = "$javaVersion"
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = "UTF-8"
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        name = "JitPack"
+        url = "https://jitpack.io/"
+    }
+    maven {
+        url = "https://maven.daporkchop.net/"
+    }
+}
+
+dependencies {
+    deobfProvided ("com.github.OpenCubicChunks.CubicChunks:cubicchunks:$cubicchunksVersion") {
+        transitive = false
+    }
+
+    compile "net.daporkchop:forgerocks:$forgerocksVersion"
+
+    testCompile "junit:junit:$junitVersion"
+
+    compileOnly "org.projectlombok:lombok:$lombokVersion"
+    annotationProcessor "org.projectlombok:lombok:$lombokVersion"
+}
+
+minecraft {
+    version = "$minecraftVersion-$minecraftforgeVersion"
+    runDir = "run"
+    mappings = "$mcpmappingsVersion"
+    makeObfSourceJar = false
+
+    def args = [
+            "-Xmx2G",
+            "-XX:+UseG1GC",
+            "-ea",
+            "-da:io.netty..."
+    ]
+    clientJvmArgs += args
+    serverJvmArgs += args
+}
+
+processResources {
+    // this will ensure that this task is redone when the versions change.
+    inputs.property "version", project.version
+    inputs.property "mcversion", project.minecraft.version
+
+    // replace stuff in mcmod.info, nothing else
+    from(sourceSets.main.resources.srcDirs) {
+        include 'mcmod.info'
+
+        // replace version and mcversion
+        expand 'version': project.version, 'mcversion': project.minecraft.version
+    }
+
+    // copy everything else except the mcmod.info
+    from(sourceSets.main.resources.srcDirs) {
+        exclude 'mcmod.info'
+    }
+}
