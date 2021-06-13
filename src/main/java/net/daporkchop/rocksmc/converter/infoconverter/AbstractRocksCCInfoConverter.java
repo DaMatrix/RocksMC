@@ -18,13 +18,12 @@
  *
  */
 
-package net.daporkchop.rocksmc.converter;
+package net.daporkchop.rocksmc.converter.infoconverter;
 
+import cubicchunks.converter.lib.Dimension;
 import cubicchunks.converter.lib.Dimensions;
 import cubicchunks.converter.lib.convert.LevelInfoConverter;
-import cubicchunks.converter.lib.convert.data.CubicChunksColumnData;
 import cubicchunks.converter.lib.util.Utils;
-import io.github.opencubicchunks.cubicchunks.api.world.storage.StorageFormatProviderBase;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import net.minecraft.nbt.CompressedStreamTools;
@@ -37,12 +36,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Path;
+import java.util.HashSet;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author DaPorkchop_
  */
 @RequiredArgsConstructor
-public class RocksLocalCubic2CCInfoConverter implements LevelInfoConverter<RocksLocalCubicColumnData, CubicChunksColumnData> {
+public abstract class AbstractRocksCCInfoConverter<IN, OUT> implements LevelInfoConverter<IN, OUT> {
     @NonNull
     private final Path srcDir;
     @NonNull
@@ -50,23 +52,25 @@ public class RocksLocalCubic2CCInfoConverter implements LevelInfoConverter<Rocks
 
     @Override
     public void convert() throws IOException {
-        Utils.createDirectories(dstDir);
-        Utils.copyEverythingExcept(srcDir, srcDir, dstDir, file ->
-                        Dimensions.getDimensions().stream().anyMatch(dim ->
-                                srcDir.resolve(dim.getDirectory()).resolve("rocksmc_local").equals(file)
-                        ),
-                f -> {
-                } // TODO: counting files
-        );
+        Utils.createDirectories(this.dstDir);
+        Utils.copyEverythingExcept(this.srcDir, this.srcDir, this.dstDir, new HashSet<>(this.ignorePaths(this.srcDir))::contains, f -> { });
 
         File cubicChunksData = this.dstDir.resolve("data").resolve("cubicChunksData.dat").toFile();
         NBTTagCompound nbt;
         try (InputStream in = new FileInputStream(cubicChunksData)) {
             nbt = CompressedStreamTools.readCompressed(in);
         }
-        nbt.getCompoundTag("data").setString("storageFormat", StorageFormatProviderBase.DEFAULT.toString());
+        nbt.getCompoundTag("data").setString("storageFormat", this.newFormatName());
         try (OutputStream out = new FileOutputStream(cubicChunksData)) {
             CompressedStreamTools.writeCompressed(nbt, out);
         }
     }
+
+    protected List<Path> ignorePaths(@NonNull Path srcDir) {
+        return Dimensions.getDimensions().stream().flatMap(dim -> this.ignorePaths(srcDir, dim).stream()).collect(Collectors.toList());
+    }
+
+    protected abstract List<Path> ignorePaths(@NonNull Path srcDir, @NonNull Dimension dim);
+
+    protected abstract String newFormatName();
 }

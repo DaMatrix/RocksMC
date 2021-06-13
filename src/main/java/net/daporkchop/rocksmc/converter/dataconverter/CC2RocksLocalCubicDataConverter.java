@@ -18,10 +18,11 @@
  *
  */
 
-package net.daporkchop.rocksmc.converter;
+package net.daporkchop.rocksmc.converter.dataconverter;
 
 import cubicchunks.converter.lib.convert.ChunkDataConverter;
 import cubicchunks.converter.lib.convert.data.CubicChunksColumnData;
+import net.daporkchop.rocksmc.converter.data.RocksLocalCubicColumnData;
 import net.daporkchop.rocksmc.util.NBTSerializerUtils;
 
 import java.util.Collections;
@@ -32,11 +33,11 @@ import java.util.stream.Collectors;
 /**
  * @author DaPorkchop_
  */
-public class RocksLocalCubic2CCDataConverter implements ChunkDataConverter<RocksLocalCubicColumnData, CubicChunksColumnData> {
+public class CC2RocksLocalCubicDataConverter implements ChunkDataConverter<CubicChunksColumnData, RocksLocalCubicColumnData> {
     @Override
-    public Set<CubicChunksColumnData> convert(RocksLocalCubicColumnData input) {
-        return Collections.singleton(new CubicChunksColumnData(input.dimension(), input.position(),
-                NBTSerializerUtils.compressForCubicChunks(input.columnData()),
-                input.cubeData().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> NBTSerializerUtils.compressForCubicChunks(e.getValue())))));
+    public Set<RocksLocalCubicColumnData> convert(CubicChunksColumnData input) {
+        return Collections.singleton(new RocksLocalCubicColumnData(input.getDimension(), input.getPosition(),
+                NBTSerializerUtils.uncompressFromCubicChunks(input.getColumnData()),
+                input.getCubeData().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> NBTSerializerUtils.uncompressFromCubicChunks(e.getValue())))));
     }
 }

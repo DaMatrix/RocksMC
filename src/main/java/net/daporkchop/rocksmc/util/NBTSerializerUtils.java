@@ -23,6 +23,7 @@ package net.daporkchop.rocksmc.util;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
+import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
 import lombok.NonNull;
@@ -32,9 +33,12 @@ import net.minecraft.nbt.CompressedStreamTools;
 import net.minecraft.nbt.NBTSizeTracker;
 import net.minecraft.nbt.NBTTagCompound;
 
+import java.io.EOFException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 /**
@@ -72,6 +76,22 @@ public class NBTSerializerUtils {
         ByteBuf tmp = UnpooledByteBufAllocator.DEFAULT.buffer(src.remaining());
         try (OutputStream out = new GZIPOutputStream(new ByteBufOutputStream(tmp))) {
             out.write(src.array(), src.arrayOffset(), src.remaining());
+        }
+        return toHeapNioBuffer(tmp);
+    }
+
+    @SneakyThrows(IOException.class)
+    public ByteBuffer uncompressFromCubicChunks(ByteBuffer src) {
+        if (src == null) {
+            return null;
+        } else if (!src.hasRemaining()) {
+            src.flip();
+        }
+
+        ByteBuf tmp = UnpooledByteBufAllocator.DEFAULT.buffer(src.remaining());
+        try (InputStream in = new GZIPInputStream(new ByteBufInputStream(Unpooled.wrappedBuffer(src)))) {
+            while (tmp.writeBytes(in, 8192) >= 0) {
+            }
         }
         return toHeapNioBuffer(tmp);
     }

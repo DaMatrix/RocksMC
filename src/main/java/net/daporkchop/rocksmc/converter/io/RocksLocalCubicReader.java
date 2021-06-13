@@ -18,7 +18,7 @@
  *
  */
 
-package net.daporkchop.rocksmc.converter;
+package net.daporkchop.rocksmc.converter.io;
 
 import cubicchunks.converter.lib.Dimension;
 import cubicchunks.converter.lib.convert.io.BaseMinecraftReader;
@@ -32,6 +32,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import lombok.NonNull;
+import net.daporkchop.rocksmc.converter.data.RocksLocalCubicColumnData;
 import net.daporkchop.rocksmc.storage.IBinaryCubeStorage;
 import net.daporkchop.rocksmc.storage.local.LocalStorageImpl;
 import net.daporkchop.rocksmc.util.NBTSerializerUtils;

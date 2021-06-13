@@ -23,6 +23,13 @@ package net.daporkchop.rocksmc.converter;
 import cubicchunks.converter.gui.GuiMain;
 import cubicchunks.converter.lib.Registry;
 import cubicchunks.converter.lib.convert.data.CubicChunksColumnData;
+import net.daporkchop.rocksmc.converter.data.RocksLocalCubicColumnData;
+import net.daporkchop.rocksmc.converter.dataconverter.CC2RocksLocalCubicDataConverter;
+import net.daporkchop.rocksmc.converter.dataconverter.RocksLocalCubic2CCDataConverter;
+import net.daporkchop.rocksmc.converter.infoconverter.CC2RocksLocalCubicInfoConverter;
+import net.daporkchop.rocksmc.converter.infoconverter.RocksLocalCubic2CCInfoConverter;
+import net.daporkchop.rocksmc.converter.io.RocksLocalCubicReader;
+import net.daporkchop.rocksmc.converter.io.RocksLocalCubicWriter;
 import org.rocksdb.RocksDB;
 
 /**
@@ -36,7 +43,10 @@ public class ConverterMain {
 
         Registry.registerReader("RocksMC (Cubic Chunks, Local)", RocksLocalCubicReader::new, RocksLocalCubicColumnData.class);
 
-        Registry.registerConverter("RocksMC (Cubic Chunks, Local)", RocksLocalCubic2CCDataConverter::new, RocksLocalCubic2CCInfoConverter::new, RocksLocalCubicColumnData.class, CubicChunksColumnData.class, RocksLocalCubic2CCDataConverter.class);
+        Registry.registerWriter("RocksMC (Cubic Chunks, Local)", RocksLocalCubicWriter::new, RocksLocalCubicColumnData.class);
+
+        Registry.registerConverter("RocksMC", RocksLocalCubic2CCDataConverter::new, RocksLocalCubic2CCInfoConverter::new, RocksLocalCubicColumnData.class, CubicChunksColumnData.class, RocksLocalCubic2CCDataConverter.class);
+        Registry.registerConverter("RocksMC", CC2RocksLocalCubicDataConverter::new, CC2RocksLocalCubicInfoConverter::new, CubicChunksColumnData.class, RocksLocalCubicColumnData.class, CC2RocksLocalCubicDataConverter.class);
     }
 
     public static void main(String... args) throws InterruptedException {

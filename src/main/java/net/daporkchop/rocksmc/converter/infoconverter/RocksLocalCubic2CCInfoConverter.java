@@ -18,31 +18,33 @@
  *
  */
 
-package net.daporkchop.rocksmc.converter;
+package net.daporkchop.rocksmc.converter.infoconverter;
 
 import cubicchunks.converter.lib.Dimension;
-import cubicchunks.regionlib.impl.EntryLocation2D;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
+import cubicchunks.converter.lib.convert.data.CubicChunksColumnData;
+import io.github.opencubicchunks.cubicchunks.api.world.storage.StorageFormatProviderBase;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
+import net.daporkchop.rocksmc.converter.data.RocksLocalCubicColumnData;
 
-import java.nio.ByteBuffer;
-import java.util.Map;
+import java.nio.file.Path;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * @author DaPorkchop_
  */
-@RequiredArgsConstructor
-@Getter
-@ToString
-@EqualsAndHashCode
-public class RocksLocalCubicColumnData {
-    @NonNull
-    private final Dimension dimension;
-    @NonNull
-    private final EntryLocation2D position;
-    private final ByteBuffer columnData;
-    private final Map<Integer, ByteBuffer> cubeData;
+public class RocksLocalCubic2CCInfoConverter extends AbstractRocksCCInfoConverter<RocksLocalCubicColumnData, CubicChunksColumnData> {
+    public RocksLocalCubic2CCInfoConverter(@NonNull Path srcDir, @NonNull Path dstDir) {
+        super(srcDir, dstDir);
+    }
+
+    @Override
+    protected List<Path> ignorePaths(@NonNull Path srcDir, @NonNull Dimension dim) {
+        return Collections.singletonList(srcDir.resolve(dim.getDirectory()).resolve("rocksmc_local"));
+    }
+
+    @Override
+    protected String newFormatName() {
+        return StorageFormatProviderBase.DEFAULT.toString();
+    }
 }

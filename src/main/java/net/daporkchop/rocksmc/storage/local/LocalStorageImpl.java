@@ -44,7 +44,6 @@ import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.DBOptions;
-import org.rocksdb.FlushOptions;
 import org.rocksdb.ReadOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
@@ -83,7 +82,6 @@ public class LocalStorageImpl implements IBinaryCubeStorage {
 
     protected static final ReadOptions READ_OPTIONS = new ReadOptions();
     protected static final WriteOptions WRITE_OPTIONS = new WriteOptions();
-    protected static final FlushOptions FLUSH_OPTIONS = new FlushOptions().setWaitForFlush(true).setAllowWriteStall(true);
 
     protected final World world;
     @Getter
@@ -378,7 +376,7 @@ public class LocalStorageImpl implements IBinaryCubeStorage {
     @Override
     public void flush() throws IOException {
         try {
-            this.db.flush(FLUSH_OPTIONS, this.cfHandles);
+            this.db.flushWal(true);
         } catch (RocksDBException e) {
             throw new IOException(e); //rethrow
         }
@@ -386,13 +384,9 @@ public class LocalStorageImpl implements IBinaryCubeStorage {
 
     @Override
     public void close() throws IOException {
-        try { //attempt to flush the WAL immediately, in order to prevent (uncompressed) log files from sitting around forever
-            this.flush();
-        } finally {
-            checkState(this.world == null || RocksMC.STORAGES_BY_WORLD.remove(this.world, this), "unable to remove self from storages map!");
+        checkState(this.world == null || RocksMC.STORAGES_BY_WORLD.remove(this.world, this), "unable to remove self from storages map!");
 
-            this.cfHandles.forEach(ColumnFamilyHandle::close); //close column families before db
-            this.db.close();
-        }
+        this.cfHandles.forEach(ColumnFamilyHandle::close); //close column families before db
+        this.db.close();
     }
 }
