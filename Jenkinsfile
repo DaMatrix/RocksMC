@@ -73,7 +73,7 @@ pipeline {
                 discordSend result: currentBuild.currentResult,
                         description: getDiscordMessage(),
                         link: env.BUILD_URL,
-                        title: "RocksCC/${BRANCH_NAME} #${BUILD_NUMBER}",
+                        title: "RocksMC/${BRANCH_NAME} #${BUILD_NUMBER}",
                         webhookURL: "${discordWebhook}"
             }
         }

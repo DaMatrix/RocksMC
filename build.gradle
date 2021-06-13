@@ -34,7 +34,7 @@ apply plugin: "net.minecraftforge.gradle.forge"
 ext {
     //general things
     javaVersion = "1.8"
-    rocksccVersion = "0.0.1." + ('git rev-list --count HEAD'.execute().text.trim()) + "-1.12.2"
+    rocksmcVersion = "0.0.1." + ('git rev-list --count HEAD'.execute().text.trim()) + "-1.12.2"
 
     //minecraft things
     mcpmappingsVersion = "stable_39"
@@ -50,7 +50,7 @@ ext {
     rocksdbVersion = "6.13.3"
 }
 
-version = "$rocksccVersion"
+version = "$rocksmcVersion"
 group = "net.daporkchop"
 
 compileJava {
@@ -73,7 +73,7 @@ repositories {
 }
 
 dependencies {
-    deobfProvided ("com.github.OpenCubicChunks.CubicChunks:cubicchunks:$cubicchunksVersion") {
+    deobfCompile ("com.github.OpenCubicChunks.CubicChunks:cubicchunks:$cubicchunksVersion") {
         transitive = false
     }
 
@@ -119,3 +119,7 @@ processResources {
         exclude 'mcmod.info'
     }
 }
+
+String branchName = System.getenv("BRANCH_NAME") //suffix jar name with branch name, if present and not the master branch
+branchName = branchName != null && !branchName.isEmpty() && !"master".equals(branchName) ? '-' + branchName.replaceAll("[^a-zA-Z0-9.-]", "_") : "";
+jar.archiveName = "RocksMC-$rocksmcVersion-$minecraftVersion" + branchName + ".jar"
