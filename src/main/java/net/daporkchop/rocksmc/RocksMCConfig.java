@@ -29,6 +29,7 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.CompressionType;
 import org.rocksdb.DBOptions;
+import org.rocksdb.Env;
 
 /**
  * RocksCC configuration.
@@ -166,10 +167,11 @@ public class RocksMCConfig {
 
         @Config.Comment({
                 "The maximum number of concurrent background jobs (both flushes and compactions combined).",
+                "If set to 0, the value of 'parallelism' will be used.",
                 "Default: 2"
         })
-        @Config.RangeInt(min = 1)
-        public int maxBackgroundJobs = 2;
+        @Config.RangeInt(min = 0)
+        public int maxBackgroundJobs = 0;
 
         @Config.Comment({
                 "The maximum number of files that may be open at once.",
@@ -202,6 +204,23 @@ public class RocksMCConfig {
         @Config.RangeInt(min = 1)
         public int tableSizeMultiplier = 1;
 
+        @Config.Comment({
+                "The maximum number of write buffers to mantain at once.",
+                "Having this set to a high number allows further writes to occur while filled write buffers are being compacted in the background.",
+                "If set to 0, the value of 'parallelism' will be used.",
+                "Default: 0"
+        })
+        @Config.RangeInt(min = 0)
+        public int maxWriteBufferNumber = 0;
+
+        @Config.Comment({
+                "The maximum number of write buffers to merge into a single L0 table during compaction.",
+                "If set to 0, the value of 'parallelism' will be used.",
+                "Default: 0"
+        })
+        @Config.RangeInt(min = 0)
+        public int minWriteBufferNumberToMerge = 0;
+
         @Config.Ignore
         protected transient volatile Tuple<DBOptions, ColumnFamilyOptions> options;
 
@@ -216,6 +235,7 @@ public class RocksMCConfig {
                         new DBOptions()
                                 .setCreateIfMissing(true)
                                 .setCreateMissingColumnFamilies(true)
+                                .setEnv(Env.getDefault().setBackgroundThreads(this.parallelism))
                                 .setIncreaseParallelism(this.parallelism)
                                 .setParanoidChecks(this.paranoidChecks)
                                 .setMaxFileOpeningThreads(this.fileOpeningThreads)
@@ -230,9 +250,11 @@ public class RocksMCConfig {
                                 .setAllowConcurrentMemtableWrite(this.allowConcurrentMemtableWrite)
                                 .setSkipStatsUpdateOnDbOpen(this.skipStatsUpdateOnDbOpen)
                                 .setManualWalFlush(this.manualWalFlush)
-                                .setMaxBackgroundJobs(this.maxBackgroundJobs)
+                                .setMaxBackgroundJobs(this.maxBackgroundJobs == 0 ? this.parallelism : this.maxBackgroundJobs)
                                 .setMaxOpenFiles(this.maxOpenFiles),
                         new ColumnFamilyOptions()
+                                .setMaxWriteBufferNumber(this.maxWriteBufferNumber == 0 ? this.parallelism : this.maxWriteBufferNumber)
+                                .setMinWriteBufferNumberToMerge(this.minWriteBufferNumberToMerge == 0 ? this.parallelism : this.minWriteBufferNumberToMerge)
                                 .setCompressionType(this.compression)
                                 .setTargetFileSizeBase((long) this.tableSizeBase << 10L)
                                 .setTargetFileSizeMultiplier(this.tableSizeMultiplier));

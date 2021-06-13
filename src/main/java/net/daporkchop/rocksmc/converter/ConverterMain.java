@@ -32,7 +32,6 @@ import net.daporkchop.rocksmc.converter.infoconverter.CC2RocksLocalCubicInfoConv
 import net.daporkchop.rocksmc.converter.infoconverter.RocksLocalCubic2CCInfoConverter;
 import net.daporkchop.rocksmc.converter.io.RocksLocalCubicReader;
 import net.daporkchop.rocksmc.converter.io.RocksLocalCubicWriter;
-import org.rocksdb.RocksDB;
 
 import javax.swing.WindowConstants;
 import java.awt.GraphicsEnvironment;
@@ -47,7 +46,6 @@ public class ConverterMain {
         if (!GraphicsEnvironment.isHeadless()) {
             GuiFrame.DEFAULT_CLOSE_OPERATION = WindowConstants.DISPOSE_ON_CLOSE;
         }
-        RocksDB.loadLibrary();
 
         Registry.registerReader("RocksMC (Cubic Chunks, Local)", RocksLocalCubicReader::new, RocksLocalCubicColumnData.class);
 

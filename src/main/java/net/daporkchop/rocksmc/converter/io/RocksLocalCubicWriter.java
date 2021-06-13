@@ -74,7 +74,7 @@ public class RocksLocalCubicWriter implements ChunkDataWriter<RocksLocalCubicCol
     @Override
     public void close() throws Exception {
         boolean exception = false;
-        for (IBinaryCubeStorage save : saves.values()) {
+        for (IBinaryCubeStorage save : this.saves.values()) {
             try {
                 save.close();
             } catch (IOException e) {

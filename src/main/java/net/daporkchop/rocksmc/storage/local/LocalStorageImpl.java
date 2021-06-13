@@ -24,8 +24,9 @@ import cubicchunks.regionlib.util.Utils;
 import io.github.opencubicchunks.cubicchunks.api.util.CubePos;
 import io.github.opencubicchunks.cubicchunks.api.world.storage.ICubicStorage;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import lombok.Getter;
 import lombok.NonNull;
@@ -125,7 +126,7 @@ public class LocalStorageImpl implements IBinaryCubeStorage {
 
     @Override
     public boolean columnExists(ChunkPos pos) throws IOException {
-        ByteBuf keyBuf = ByteBufAllocator.DEFAULT.directBuffer(SIZE_COLUMN_POS, SIZE_COLUMN_POS);
+        ByteBuf keyBuf = UnpooledByteBufAllocator.DEFAULT.directBuffer(SIZE_COLUMN_POS, SIZE_COLUMN_POS);
         try {
             //encode position to bytes
             PositionSerializerUtils.writeColumnPos(keyBuf, pos);
@@ -141,7 +142,7 @@ public class LocalStorageImpl implements IBinaryCubeStorage {
 
     @Override
     public boolean cubeExists(CubePos pos) throws IOException {
-        ByteBuf keyBuf = ByteBufAllocator.DEFAULT.directBuffer(SIZE_CUBE_POS, SIZE_CUBE_POS);
+        ByteBuf keyBuf = UnpooledByteBufAllocator.DEFAULT.directBuffer(SIZE_CUBE_POS, SIZE_CUBE_POS);
         try {
             //encode position to bytes
             PositionSerializerUtils.writeCubePos(keyBuf, pos);
@@ -238,7 +239,7 @@ public class LocalStorageImpl implements IBinaryCubeStorage {
 
     @Override
     public void writeColumn(ChunkPos pos, NBTTagCompound nbt) throws IOException {
-        ByteBuf buf = ByteBufAllocator.DEFAULT.directBuffer(INITIAL_BUFFER_SIZE);
+        ByteBuf buf = UnpooledByteBufAllocator.DEFAULT.directBuffer(INITIAL_BUFFER_SIZE);
         try {
             //encode position
             PositionSerializerUtils.writeColumnPos(buf, pos);
@@ -259,7 +260,7 @@ public class LocalStorageImpl implements IBinaryCubeStorage {
 
     @Override
     public void writeCube(CubePos pos, NBTTagCompound nbt) throws IOException {
-        ByteBuf buf = ByteBufAllocator.DEFAULT.directBuffer(INITIAL_BUFFER_SIZE);
+        ByteBuf buf = UnpooledByteBufAllocator.DEFAULT.directBuffer(INITIAL_BUFFER_SIZE);
         try {
             //encode position
             PositionSerializerUtils.writeCubePos(buf, pos);
@@ -289,7 +290,7 @@ public class LocalStorageImpl implements IBinaryCubeStorage {
     }
 
     protected <T> void writeBaseBatch(@NonNull Map<ChunkPos, T> columns, @NonNull Map<CubePos, T> cubes, @NonNull BiConsumer<ByteBuf, T> encoder) throws IOException {
-        ByteBuf buf = ByteBufAllocator.DEFAULT.directBuffer(INITIAL_BUFFER_SIZE);
+        ByteBuf buf = UnpooledByteBufAllocator.DEFAULT.directBuffer(INITIAL_BUFFER_SIZE);
         try (WriteBatch dst = new WriteBatch()) {
             columns.forEach(new BiConsumer<ChunkPos, T>() {
                 @Override
@@ -337,7 +338,7 @@ public class LocalStorageImpl implements IBinaryCubeStorage {
 
     @Override
     public void forEachColumn(Consumer<ChunkPos> callback) throws IOException {
-        ByteBuf keyBuf = ByteBufAllocator.DEFAULT.directBuffer(SIZE_COLUMN_POS, SIZE_COLUMN_POS).writerIndex(SIZE_COLUMN_POS);
+        ByteBuf keyBuf = UnpooledByteBufAllocator.DEFAULT.directBuffer(SIZE_COLUMN_POS, SIZE_COLUMN_POS).writerIndex(SIZE_COLUMN_POS);
         ByteBuffer nioKeyBuffer = keyBuf.nioBuffer();
         try (RocksIterator itr = this.db.newIterator(this.cfHandleColumns)) {
             for (itr.seekToFirst(); itr.isValid(); itr.next()) {
@@ -356,7 +357,7 @@ public class LocalStorageImpl implements IBinaryCubeStorage {
 
     @Override
     public void forEachCube(Consumer<CubePos> callback) throws IOException {
-        ByteBuf keyBuf = ByteBufAllocator.DEFAULT.directBuffer(SIZE_CUBE_POS, SIZE_CUBE_POS).writerIndex(SIZE_CUBE_POS);
+        ByteBuf keyBuf = UnpooledByteBufAllocator.DEFAULT.directBuffer(SIZE_CUBE_POS, SIZE_CUBE_POS).writerIndex(SIZE_CUBE_POS);
         ByteBuffer nioKeyBuffer = keyBuf.nioBuffer();
         try (RocksIterator itr = this.db.newIterator(this.cfHandleCubes)) {
             for (itr.seekToFirst(); itr.isValid(); itr.next()) {
