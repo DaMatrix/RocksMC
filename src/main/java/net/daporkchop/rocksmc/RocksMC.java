@@ -21,7 +21,7 @@
 package net.daporkchop.rocksmc;
 
 import io.github.opencubicchunks.cubicchunks.api.world.storage.StorageFormatProviderBase;
-import net.daporkchop.rocksmc.command.CommandRocks;
+import net.daporkchop.rocksmc.command.CommandRoot;
 import net.daporkchop.rocksmc.storage.local.LocalStorageImpl;
 import net.daporkchop.rocksmc.storage.local.LocalStorageProvider;
 import net.minecraft.world.World;
@@ -73,7 +73,7 @@ public class RocksMC {
 
     @Mod.EventHandler
     public void serverStarting(FMLServerStartingEvent event) {
-        event.registerServerCommand(new CommandRocks());
+        event.registerServerCommand(new CommandRoot());
     }
 
     @Mod.EventHandler

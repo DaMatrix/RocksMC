@@ -20,59 +20,29 @@
 
 package net.daporkchop.rocksmc.command;
 
-import net.daporkchop.rocksmc.RocksMC;
+import net.daporkchop.rocksmc.converter.ConverterMain;
 import net.minecraft.command.CommandException;
 import net.minecraft.command.ICommandSender;
-import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.math.BlockPos;
-import net.minecraftforge.server.permission.DefaultPermissionLevel;
-import net.minecraftforge.server.permission.PermissionAPI;
-
-import javax.annotation.Nullable;
-import java.util.Arrays;
-import java.util.List;
+import net.minecraft.util.text.TextComponentString;
 
 /**
  * @author DaPorkchop_
  */
-public class CommandRocks extends AbstractRocksCommand {
-    public static final String PERMISSION_ROOT = RocksMC.MODID + ".command";
-
-    public CommandRocks() {
-        PermissionAPI.registerNode(PERMISSION_ROOT, DefaultPermissionLevel.OP, "Allows access to all /rocksmc subcommands");
-    }
-
+public class CommandConverter extends AbstractRocksCommand {
     @Override
     public String getName() {
-        return "rocksmc";
-    }
-
-    @Override
-    public List<String> getAliases() {
-        return Arrays.asList("rocks");
+        return "converter";
     }
 
     @Override
     public String getUsage(ICommandSender sender) {
-        return "/rocksmc";
-    }
-
-    @Override
-    public boolean checkPermission(MinecraftServer server, ICommandSender sender) {
-        if (sender instanceof EntityPlayer) {
-            return PermissionAPI.hasPermission((EntityPlayer) sender, PERMISSION_ROOT);
-        } else {
-            return super.checkPermission(server, sender);
-        }
+        return "";
     }
 
     @Override
     public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
-    }
-
-    @Override
-    public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender, String[] args, @Nullable BlockPos targetPos) {
-        return super.getTabCompletions(server, sender, args, targetPos);
+        sender.sendMessage(new TextComponentString("Opening converter GUI..."));
+        new Thread(() -> ConverterMain.main(args)).start();
     }
 }

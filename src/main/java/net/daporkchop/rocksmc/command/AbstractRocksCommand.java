@@ -25,9 +25,20 @@ import net.daporkchop.rocksmc.RocksMC;
 import net.daporkchop.rocksmc.storage.local.LocalStorageImpl;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.CommandException;
+import net.minecraft.command.ICommandSender;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.WorldServer;
 import net.minecraftforge.common.DimensionManager;
+
+import javax.annotation.Nullable;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static net.daporkchop.rocksmc.util.TranslationKeys.*;
 
@@ -37,6 +48,14 @@ import static net.daporkchop.rocksmc.util.TranslationKeys.*;
  * @author DaPorkchop_
  */
 public abstract class AbstractRocksCommand extends CommandBase {
+    private final Map<String, CommandBase> children = new HashMap<>();
+
+    public AbstractRocksCommand(@NonNull CommandBase... children) {
+        for (CommandBase child : children) {
+            Stream.concat(Stream.of(child.getName()), child.getAliases().stream()).distinct().forEach(name -> this.children.put(name, child));
+        }
+    }
+
     protected LocalStorageImpl getStorage(@NonNull MinecraftServer server, @NonNull String name) throws CommandException {
         int id; //attempt to parse dimension id
         try {
@@ -56,5 +75,30 @@ public abstract class AbstractRocksCommand extends CommandBase {
         }
 
         return storage;
+    }
+
+    @Override
+    public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
+        if (!this.children.isEmpty() && args.length >= 1) {
+            Optional<Map.Entry<String, CommandBase>> exactMatch = this.children.entrySet().stream().filter(e -> args[0].equals(e.getKey())).findAny();
+            if (exactMatch.isPresent()) {
+                exactMatch.get().getValue().execute(server, sender, Arrays.copyOfRange(args, 1, args.length));
+            }
+        }
+    }
+
+    @Override
+    public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender, String[] args, @Nullable BlockPos targetPos) {
+        if (args.length == 1) {
+            Optional<Map.Entry<String, CommandBase>> exactMatch = this.children.entrySet().stream().filter(e -> args[0].equals(e.getKey())).findAny();
+            if (exactMatch.isPresent()) {
+                return exactMatch.get().getValue().getTabCompletions(server, sender, Arrays.copyOfRange(args, 1, args.length), targetPos);
+            }
+        }
+        if (args.length <= 1) {
+            return this.children.keySet().stream().filter(s -> args.length == 0 || s.startsWith(args[0])).collect(Collectors.toList());
+        }
+
+        return super.getTabCompletions(server, sender, args, targetPos);
     }
 }

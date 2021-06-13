@@ -13,7 +13,10 @@
 
 - global saves
 - snapshots
-- conversion to/from standard world formats
+
+## Conversion
+
+RocksMC features a built-in converter between existing world formats based on [CubicChunksConverter](https://github.com/OpenCubicChunks/CubicChunksConverter). Access it by installing RocksMC, opening a single-player world, and running `/rocksmc converter`.
 
 ## Concepts
 

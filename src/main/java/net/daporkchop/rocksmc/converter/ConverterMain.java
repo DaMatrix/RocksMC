@@ -20,9 +20,11 @@
 
 package net.daporkchop.rocksmc.converter;
 
+import cubicchunks.converter.gui.GuiFrame;
 import cubicchunks.converter.gui.GuiMain;
 import cubicchunks.converter.lib.Registry;
 import cubicchunks.converter.lib.convert.data.CubicChunksColumnData;
+import lombok.SneakyThrows;
 import net.daporkchop.rocksmc.converter.data.RocksLocalCubicColumnData;
 import net.daporkchop.rocksmc.converter.dataconverter.CC2RocksLocalCubicDataConverter;
 import net.daporkchop.rocksmc.converter.dataconverter.RocksLocalCubic2CCDataConverter;
@@ -32,6 +34,9 @@ import net.daporkchop.rocksmc.converter.io.RocksLocalCubicReader;
 import net.daporkchop.rocksmc.converter.io.RocksLocalCubicWriter;
 import org.rocksdb.RocksDB;
 
+import javax.swing.WindowConstants;
+import java.awt.GraphicsEnvironment;
+
 /**
  * Delegating main class for the converter which injects the RocksMC formats into the CubicChunksConverter registry before loading.
  *
@@ -39,6 +44,9 @@ import org.rocksdb.RocksDB;
  */
 public class ConverterMain {
     static {
+        if (!GraphicsEnvironment.isHeadless()) {
+            GuiFrame.DEFAULT_CLOSE_OPERATION = WindowConstants.DISPOSE_ON_CLOSE;
+        }
         RocksDB.loadLibrary();
 
         Registry.registerReader("RocksMC (Cubic Chunks, Local)", RocksLocalCubicReader::new, RocksLocalCubicColumnData.class);
@@ -49,7 +57,8 @@ public class ConverterMain {
         Registry.registerConverter("RocksMC", CC2RocksLocalCubicDataConverter::new, CC2RocksLocalCubicInfoConverter::new, CubicChunksColumnData.class, RocksLocalCubicColumnData.class, CC2RocksLocalCubicDataConverter.class);
     }
 
-    public static void main(String... args) throws InterruptedException {
+    @SneakyThrows(InterruptedException.class)
+    public static void main(String... args) {
         GuiMain.main(args);
     }
 }
