@@ -18,43 +18,31 @@
  *
  */
 
-package net.daporkchop.rocksmc.command;
+package net.daporkchop.rocksmc.converter;
 
+import cubicchunks.converter.lib.Dimension;
+import cubicchunks.regionlib.impl.EntryLocation2D;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NonNull;
-import net.daporkchop.rocksmc.RocksMC;
-import net.daporkchop.rocksmc.storage.local.LocalStorageImpl;
-import net.minecraft.command.CommandBase;
-import net.minecraft.command.CommandException;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.world.WorldServer;
-import net.minecraftforge.common.DimensionManager;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
-import static net.daporkchop.rocksmc.util.TranslationKeys.*;
+import java.nio.ByteBuffer;
+import java.util.Map;
 
 /**
- * Base class for all {@code /rockscc} subcommands.
- *
  * @author DaPorkchop_
  */
-public abstract class AbstractRocksCommand extends CommandBase {
-    protected LocalStorageImpl getStorage(@NonNull MinecraftServer server, @NonNull String name) throws CommandException {
-        int id; //attempt to parse dimension id
-        try {
-            id = Integer.parseInt(name);
-        } catch (NumberFormatException e) {
-            throw new CommandException(ERROR_CANNOT_PARSE_DIM, name);
-        }
-
-        WorldServer world = DimensionManager.getWorld(id); //find loaded dimension with id
-        if (world == null) {
-            throw new CommandException(ERROR_CANNOT_FIND_DIM, id);
-        }
-
-        LocalStorageImpl storage = RocksMC.STORAGES_BY_WORLD.get(world); //find rockscc storage for world
-        if (storage == null) {
-            throw new CommandException(ERROR_NOT_ROCKSMC, id);
-        }
-
-        return storage;
-    }
+@RequiredArgsConstructor
+@Getter
+@ToString
+@EqualsAndHashCode
+public class RocksLocalCubicColumnData {
+    @NonNull
+    private final Dimension dimension;
+    @NonNull
+    private final EntryLocation2D position;
+    private final ByteBuffer columnData;
+    private final Map<Integer, ByteBuffer> cubeData;
 }

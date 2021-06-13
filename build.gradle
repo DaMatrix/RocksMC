@@ -20,6 +20,7 @@
 
 buildscript {
     repositories {
+        jcenter()
         maven {
             name = "Minecraft Forge"
             url = "https://files.minecraftforge.net/maven"
@@ -27,14 +28,16 @@ buildscript {
     }
     dependencies {
         classpath "net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT"
+        classpath "com.github.jengelman.gradle.plugins:shadow:4.0.0"
     }
 }
 apply plugin: "net.minecraftforge.gradle.forge"
+apply plugin: "com.github.johnrengelman.shadow"
 
 ext {
     //general things
     javaVersion = "1.8"
-    rocksmcVersion = "0.0.1." + ('git rev-list --count HEAD'.execute().text.trim()) + "-1.12.2"
+    rocksmcVersion = "0.0.1." + ('git rev-list --count HEAD'.execute().text.trim())
 
     //minecraft things
     mcpmappingsVersion = "stable_39"
@@ -43,6 +46,7 @@ ext {
 
     //dependency things
     cubicchunksVersion = "f4d7d2debf"
+    cubicchunksconverterVersion = "e808bb5ae3"
     forgerocksVersion = "6.13.3-1.12.2"
     junitVersion = "4.12"
     leveldbVersion = "0.0.10-SNAPSHOT"
@@ -50,7 +54,7 @@ ext {
     rocksdbVersion = "6.13.3"
 }
 
-version = "$rocksmcVersion"
+version = "$rocksmcVersion-$minecraftVersion"
 group = "net.daporkchop"
 
 compileJava {
@@ -68,13 +72,23 @@ repositories {
         url = "https://jitpack.io/"
     }
     maven {
+        name = "DaPorkchop_"
         url = "https://maven.daporkchop.net/"
     }
+}
+
+configurations {
+    shade
+    compile.extendsFrom shade
 }
 
 dependencies {
     deobfCompile ("com.github.OpenCubicChunks.CubicChunks:cubicchunks:$cubicchunksVersion") {
         transitive = false
+    }
+
+    shade ("com.github.DaMatrix:CubicChunksConverter:$cubicchunksconverterVersion") {
+        exclude group: "com.google.guava"
     }
 
     compile "net.daporkchop:forgerocks:$forgerocksVersion"
@@ -120,6 +134,25 @@ processResources {
     }
 }
 
-String branchName = System.getenv("BRANCH_NAME") //suffix jar name with branch name, if present and not the master branch
-branchName = branchName != null && !branchName.isEmpty() && !"master".equals(branchName) ? '-' + branchName.replaceAll("[^a-zA-Z0-9.-]", "_") : "";
-jar.archiveName = "RocksMC-$rocksmcVersion-$minecraftVersion" + branchName + ".jar"
+shadowJar {
+    String branchName = System.getenv("BRANCH_NAME") //suffix jar name with branch name, if present and not the master branch
+    branchName = branchName != null && !branchName.isEmpty() && !"master".equals(branchName) ? '-' + branchName.replaceAll("[^a-zA-Z0-9.-]", "_") : "";
+    archiveName = "RocksMC-$rocksmcVersion-$minecraftVersion" + branchName + ".jar"
+
+    classifier = null
+    configurations = [project.configurations.shade]
+
+    exclude 'module-info.class'
+}
+build.dependsOn shadowJar
+
+reobf { //reobfuscate the shaded JAR
+    shadowJar {}
+}
+
+//relocate all shaded dependencies
+task relocateShadowJar(type: com.github.jengelman.gradle.plugins.shadow.tasks.ConfigureShadowRelocation) {
+    target = tasks.shadowJar
+    prefix = "net.daporkchop.rocksmc.dep"
+}
+shadowJar.dependsOn relocateShadowJar

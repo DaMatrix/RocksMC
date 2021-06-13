@@ -23,6 +23,8 @@ package net.daporkchop.rocksmc.util;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
+import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.util.ReferenceCountUtil;
 import lombok.NonNull;
 import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
@@ -31,6 +33,9 @@ import net.minecraft.nbt.NBTSizeTracker;
 import net.minecraft.nbt.NBTTagCompound;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.util.zip.GZIPOutputStream;
 
 /**
  * Utilities for reading/writing NBT data to/from Netty {@link ByteBuf}s.
@@ -39,6 +44,38 @@ import java.io.IOException;
  */
 @UtilityClass
 public class NBTSerializerUtils {
+    public ByteBuffer toHeapNioBuffer(ByteBuf src) {
+        if (src == null) {
+            return null;
+        }
+
+        try {
+            if (src.hasArray() && src.alloc() instanceof UnpooledByteBufAllocator) {
+                return ByteBuffer.wrap(src.array(), src.arrayOffset() + src.readerIndex(), src.readableBytes());
+            } else {
+                ByteBuffer dst = ByteBuffer.allocate(src.readableBytes());
+                src.readBytes(dst);
+                dst.flip();
+                return dst;
+            }
+        } finally {
+            ReferenceCountUtil.release(src);
+        }
+    }
+
+    @SneakyThrows(IOException.class)
+    public ByteBuffer compressForCubicChunks(ByteBuffer src) {
+        if (src == null) {
+            return null;
+        }
+
+        ByteBuf tmp = UnpooledByteBufAllocator.DEFAULT.buffer(src.remaining());
+        try (OutputStream out = new GZIPOutputStream(new ByteBufOutputStream(tmp))) {
+            out.write(src.array(), src.arrayOffset(), src.remaining());
+        }
+        return toHeapNioBuffer(tmp);
+    }
+
     @SneakyThrows(IOException.class)
     public void writeNBT(@NonNull ByteBuf dst, @NonNull NBTTagCompound nbt) {
         //this doesn't actually do compression

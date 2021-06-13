@@ -32,6 +32,8 @@ import lombok.NonNull;
 import lombok.SneakyThrows;
 import net.daporkchop.rocksmc.RocksMC;
 import net.daporkchop.rocksmc.RocksMCConfig;
+import net.daporkchop.rocksmc.storage.IBinaryCubeStorage;
+import net.daporkchop.rocksmc.util.IOFunction;
 import net.daporkchop.rocksmc.util.NBTSerializerUtils;
 import net.daporkchop.rocksmc.util.PositionSerializerUtils;
 import net.minecraft.nbt.NBTTagCompound;
@@ -60,6 +62,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.*;
@@ -70,7 +73,7 @@ import static net.daporkchop.rocksmc.util.PositionSerializerUtils.*;
  *
  * @author DaPorkchop_
  */
-public class LocalStorageImpl implements ICubicStorage {
+public class LocalStorageImpl implements IBinaryCubeStorage {
     protected static final byte[] COLUMN_NAME_COLUMNS = "columns".getBytes(StandardCharsets.UTF_8);
     protected static final byte[] COLUMN_NAME_CUBES = "cubes".getBytes(StandardCharsets.UTF_8);
 
@@ -82,7 +85,6 @@ public class LocalStorageImpl implements ICubicStorage {
     protected static final WriteOptions WRITE_OPTIONS = new WriteOptions();
     protected static final FlushOptions FLUSH_OPTIONS = new FlushOptions().setWaitForFlush(true).setAllowWriteStall(true);
 
-    @Getter
     protected final World world;
     @Getter
     protected final Path path;
@@ -93,7 +95,7 @@ public class LocalStorageImpl implements ICubicStorage {
     protected final ColumnFamilyHandle cfHandleColumns;
     protected final ColumnFamilyHandle cfHandleCubes;
 
-    public LocalStorageImpl(@NonNull World world, @NonNull Path path) throws IOException {
+    public LocalStorageImpl(World world, @NonNull Path path) throws IOException {
         this.world = world;
         this.path = path.resolve("rocksmc_local");
 
@@ -118,7 +120,9 @@ public class LocalStorageImpl implements ICubicStorage {
             throw new IOException(e); //rethrow
         }
 
-        RocksMC.STORAGES_BY_WORLD.put(world, this);
+        if (world != null) {
+            RocksMC.STORAGES_BY_WORLD.put(world, this);
+        }
     }
 
     @Override
@@ -184,6 +188,15 @@ public class LocalStorageImpl implements ICubicStorage {
     @Nonnull
     @Override
     public NBTBatch readBatch(PosBatch positions) throws IOException {
+        return this.readBaseBatch(positions, data -> data != null ? NBTSerializerUtils.readNBT(Unpooled.wrappedBuffer(data)) : null, NBTBatch::new);
+    }
+
+    @Override
+    public BinaryBatch readBinaryBatch(PosBatch positions) throws IOException {
+        return this.readBaseBatch(positions, data -> data != null ? Unpooled.wrappedBuffer(data) : null, BinaryBatch::new);
+    }
+
+    protected <T, B> B readBaseBatch(@NonNull PosBatch positions, @NonNull IOFunction<byte[], T> mapper, @NonNull BiFunction<Map<ChunkPos, T>, Map<CubePos, T>, B> batchCombiner) throws IOException {
         try {
             //collect positions into lists
             List<ChunkPos> columns = new ArrayList<>(positions.columns);
@@ -199,9 +212,9 @@ public class LocalStorageImpl implements ICubicStorage {
                 cfHandles.add(this.cfHandleColumns);
                 keys.add(PositionSerializerUtils.columnPosToBytes(pos));
             }
-            for (ChunkPos pos : columns) {
+            for (CubePos pos : cubes) {
                 cfHandles.add(this.cfHandleCubes);
-                keys.add(PositionSerializerUtils.columnPosToBytes(pos));
+                keys.add(PositionSerializerUtils.cubePosToBytes(pos));
             }
 
             //get all values at once
@@ -209,19 +222,17 @@ public class LocalStorageImpl implements ICubicStorage {
 
             //parse values
             //TODO: this part might benefit from being parallel
-            Map<ChunkPos, NBTTagCompound> columnNbt = new Object2ObjectOpenHashMap<>(columns.size());
-            Map<CubePos, NBTTagCompound> cubeNbt = new Object2ObjectOpenHashMap<>(cubes.size());
+            Map<ChunkPos, T> columnNbt = new Object2ObjectOpenHashMap<>(columns.size());
+            Map<CubePos, T> cubeNbt = new Object2ObjectOpenHashMap<>(cubes.size());
             int i = 0;
             for (ChunkPos pos : columns) {
-                byte[] data = values.get(i++);
-                columnNbt.put(pos, data != null ? NBTSerializerUtils.readNBT(Unpooled.wrappedBuffer(data)) : null);
+                columnNbt.put(pos, mapper.apply(values.get(i++)));
             }
             for (CubePos pos : cubes) {
-                byte[] data = values.get(i++);
-                cubeNbt.put(pos, data != null ? NBTSerializerUtils.readNBT(Unpooled.wrappedBuffer(data)) : null);
+                cubeNbt.put(pos, mapper.apply(values.get(i++)));
             }
 
-            return new NBTBatch(columnNbt, cubeNbt);
+            return batchCombiner.apply(columnNbt, cubeNbt);
         } catch (RocksDBException e) {
             throw new IOException(e); //rethrow
         }
@@ -271,37 +282,46 @@ public class LocalStorageImpl implements ICubicStorage {
 
     @Override
     public void writeBatch(NBTBatch batch) throws IOException {
+        this.writeBaseBatch(batch.columns, batch.cubes, NBTSerializerUtils::writeNBT);
+    }
+
+    @Override
+    public void writeBinaryBatch(BinaryBatch batch) throws IOException {
+        this.writeBaseBatch(batch.columns, batch.cubes, ByteBuf::writeBytes);
+    }
+
+    protected <T> void writeBaseBatch(@NonNull Map<ChunkPos, T> columns, @NonNull Map<CubePos, T> cubes, @NonNull BiConsumer<ByteBuf, T> encoder) throws IOException {
         ByteBuf buf = ByteBufAllocator.DEFAULT.directBuffer(INITIAL_BUFFER_SIZE);
         try (WriteBatch dst = new WriteBatch()) {
-            batch.columns.forEach(new BiConsumer<ChunkPos, NBTTagCompound>() {
+            columns.forEach(new BiConsumer<ChunkPos, T>() {
                 @Override
                 @SneakyThrows(RocksDBException.class)
-                public void accept(ChunkPos pos, NBTTagCompound nbt) {
+                public void accept(ChunkPos pos, T nbt) {
                     buf.clear();
 
                     //encode position
                     PositionSerializerUtils.writeColumnPos(buf, pos);
                     ByteBuffer nioKeyBuffer = buf.nioBuffer();
 
-                    //encode nbt
-                    NBTSerializerUtils.writeNBT(buf, nbt);
+                    //encode data
+                    encoder.accept(buf, nbt);
                     ByteBuffer nioValueBuffer = buf.nioBuffer(buf.readerIndex() + SIZE_COLUMN_POS, buf.readableBytes() - SIZE_COLUMN_POS);
 
                     dst.put(LocalStorageImpl.this.cfHandleColumns, nioKeyBuffer, nioValueBuffer);
                 }
             });
-            batch.cubes.forEach(new BiConsumer<CubePos, NBTTagCompound>() {
+            cubes.forEach(new BiConsumer<CubePos, T>() {
                 @Override
                 @SneakyThrows(RocksDBException.class)
-                public void accept(CubePos pos, NBTTagCompound nbt) {
+                public void accept(CubePos pos, T nbt) {
                     buf.clear();
 
                     //encode position
                     PositionSerializerUtils.writeCubePos(buf, pos);
                     ByteBuffer nioKeyBuffer = buf.nioBuffer();
 
-                    //encode nbt
-                    NBTSerializerUtils.writeNBT(buf, nbt);
+                    //encode data
+                    encoder.accept(buf, nbt);
                     ByteBuffer nioValueBuffer = buf.nioBuffer(buf.readerIndex() + SIZE_CUBE_POS, buf.readableBytes() - SIZE_CUBE_POS);
 
                     dst.put(LocalStorageImpl.this.cfHandleCubes, nioKeyBuffer, nioValueBuffer);
@@ -369,7 +389,7 @@ public class LocalStorageImpl implements ICubicStorage {
         try { //attempt to flush the WAL immediately, in order to prevent (uncompressed) log files from sitting around forever
             this.flush();
         } finally {
-            checkState(RocksMC.STORAGES_BY_WORLD.remove(this.world, this), "unable to remove self from storages map!");
+            checkState(this.world == null || RocksMC.STORAGES_BY_WORLD.remove(this.world, this), "unable to remove self from storages map!");
 
             this.cfHandles.forEach(ColumnFamilyHandle::close); //close column families before db
             this.db.close();

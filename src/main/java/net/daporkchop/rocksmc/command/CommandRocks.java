@@ -21,7 +21,6 @@
 package net.daporkchop.rocksmc.command;
 
 import net.daporkchop.rocksmc.RocksMC;
-import net.minecraft.command.CommandBase;
 import net.minecraft.command.CommandException;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.entity.player.EntityPlayer;
@@ -37,7 +36,7 @@ import java.util.List;
 /**
  * @author DaPorkchop_
  */
-public class CommandRocks extends CommandBase {
+public class CommandRocks extends AbstractRocksCommand {
     public static final String PERMISSION_ROOT = RocksMC.MODID + ".command";
 
     public CommandRocks() {
