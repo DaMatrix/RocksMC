@@ -1,5 +1,14 @@
 # RocksMC
 
+*A fast, compact and powerful storage format for Minecraft, built using [rocksdb](https://github.com/facebook/rocksdb).*  
+*Currently only supports [Cubic Chunks](https://github.com/OpenCubicChunks/CubicChunks).*
+
+## TODO:
+
+- global saves
+- snapshots
+- conversion to/from standard world formats
+
 ## Concepts
 
 ***NOTE: Currently, only local saves are implemented, global saves and snapshots are not.***

@@ -45,7 +45,7 @@ import java.util.Map;
  * @author DaPorkchop_
  */
 @Mod(modid = RocksMC.MODID,
-        dependencies = "required-after:cubicchunks@[1.12.2-0.0.1189.0,)",
+        dependencies = "required-after:forgerocks@[6.13.3-1.12.2,);required-after:cubicchunks@[1.12.2-0.0.1189.0,)",
         acceptableRemoteVersions = "*",
         useMetadata = true)
 public class RocksMC {
