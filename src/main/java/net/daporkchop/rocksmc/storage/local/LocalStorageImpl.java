@@ -24,9 +24,9 @@ import cubicchunks.regionlib.util.Utils;
 import io.github.opencubicchunks.cubicchunks.api.util.CubePos;
 import io.github.opencubicchunks.cubicchunks.api.world.storage.ICubicStorage;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.util.ReferenceCountUtil;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import lombok.Getter;
 import lombok.NonNull;
@@ -37,6 +37,7 @@ import net.daporkchop.rocksmc.storage.IBinaryCubeStorage;
 import net.daporkchop.rocksmc.util.IOFunction;
 import net.daporkchop.rocksmc.util.NBTSerializerUtils;
 import net.daporkchop.rocksmc.util.PositionSerializerUtils;
+import net.daporkchop.rocksmc.util.RocksMCUtils;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.Tuple;
 import net.minecraft.util.math.ChunkPos;
@@ -83,6 +84,21 @@ public class LocalStorageImpl implements IBinaryCubeStorage {
 
     protected static final ReadOptions READ_OPTIONS = new ReadOptions();
     protected static final WriteOptions WRITE_OPTIONS = new WriteOptions();
+
+    protected static ByteBuf read(@NonNull RocksDB db, @NonNull ColumnFamilyHandle cf, @NonNull ByteBuf key) throws RocksDBException {
+        ByteBuf value = UnpooledByteBufAllocator.DEFAULT.directBuffer(64 << 10);
+        int size;
+        while ((size = db.get(cf, READ_OPTIONS, key.nioBuffer(), value.nioBuffer(value.writerIndex(), value.writableBytes()))) > value.writableBytes()) {
+            value.ensureWritable(size);
+        }
+        if (size >= 0) {
+            value.writerIndex(value.writerIndex() + size);
+            return value;
+        } else { //not found
+            value.release();
+            return null;
+        }
+    }
 
     protected final World world;
     @Getter
@@ -158,29 +174,39 @@ public class LocalStorageImpl implements IBinaryCubeStorage {
 
     @Override
     public NBTTagCompound readColumn(ChunkPos pos) throws IOException {
+        ByteBuf key = UnpooledByteBufAllocator.DEFAULT.directBuffer(SIZE_COLUMN_POS, SIZE_COLUMN_POS);
+        ByteBuf value = null;
         try {
             //encode position to bytes
-            byte[] key = PositionSerializerUtils.columnPosToBytes(pos);
+            PositionSerializerUtils.writeColumnPos(key, pos);
 
             //load from db
-            byte[] data = this.db.get(this.cfHandleColumns, key);
-            return data != null ? NBTSerializerUtils.readNBT(Unpooled.wrappedBuffer(data)) : null;
+            value = read(this.db, this.cfHandleCubes, key);
+            return value != null ? NBTSerializerUtils.readNBT(value) : null;
         } catch (RocksDBException e) {
             throw new IOException(e); //rethrow
+        } finally {
+            ReferenceCountUtil.release(key);
+            ReferenceCountUtil.release(value);
         }
     }
 
     @Override
     public NBTTagCompound readCube(CubePos pos) throws IOException {
+        ByteBuf key = UnpooledByteBufAllocator.DEFAULT.directBuffer(SIZE_CUBE_POS, SIZE_CUBE_POS);
+        ByteBuf value = null;
         try {
             //encode position to bytes
-            byte[] key = PositionSerializerUtils.cubePosToBytes(pos);
+            PositionSerializerUtils.writeCubePos(key, pos);
 
             //load from db
-            byte[] data = this.db.get(this.cfHandleCubes, key);
-            return data != null ? NBTSerializerUtils.readNBT(Unpooled.wrappedBuffer(data)) : null;
+            value = read(this.db, this.cfHandleCubes, key);
+            return value != null ? NBTSerializerUtils.readNBT(value) : null;
         } catch (RocksDBException e) {
             throw new IOException(e); //rethrow
+        } finally {
+            ReferenceCountUtil.release(key);
+            ReferenceCountUtil.release(value);
         }
     }
 
@@ -249,6 +275,8 @@ public class LocalStorageImpl implements IBinaryCubeStorage {
             NBTSerializerUtils.writeNBT(buf, nbt);
             ByteBuffer nioValueBuffer = buf.nioBuffer(buf.readerIndex() + SIZE_COLUMN_POS, buf.readableBytes() - SIZE_COLUMN_POS);
 
+            RocksMC.LOGGER.debug("executing single write with 1 column, totalling {}", RocksMCUtils.formatSize(buf.readableBytes()));
+
             //write to db
             this.db.put(this.cfHandleColumns, WRITE_OPTIONS, nioKeyBuffer, nioValueBuffer);
         } catch (RocksDBException e) {
@@ -270,6 +298,8 @@ public class LocalStorageImpl implements IBinaryCubeStorage {
             NBTSerializerUtils.writeNBT(buf, nbt);
             ByteBuffer nioValueBuffer = buf.nioBuffer(buf.readerIndex() + SIZE_CUBE_POS, buf.readableBytes() - SIZE_CUBE_POS);
 
+            RocksMC.LOGGER.debug("executing single write with 1 cube, totalling {}", RocksMCUtils.formatSize(buf.readableBytes()));
+
             //write to db
             this.db.put(this.cfHandleCubes, WRITE_OPTIONS, nioKeyBuffer, nioValueBuffer);
         } catch (RocksDBException e) {
@@ -290,6 +320,11 @@ public class LocalStorageImpl implements IBinaryCubeStorage {
     }
 
     protected <T> void writeBaseBatch(@NonNull Map<ChunkPos, T> columns, @NonNull Map<CubePos, T> cubes, @NonNull BiConsumer<ByteBuf, T> encoder) throws IOException {
+        if (columns.isEmpty() && cubes.isEmpty()) {
+            //both maps are empty, so nothing needs to be done
+            return;
+        }
+
         ByteBuf buf = UnpooledByteBufAllocator.DEFAULT.directBuffer(INITIAL_BUFFER_SIZE);
         try (WriteBatch dst = new WriteBatch()) {
             columns.forEach(new BiConsumer<ChunkPos, T>() {
@@ -326,6 +361,8 @@ public class LocalStorageImpl implements IBinaryCubeStorage {
                     dst.put(LocalStorageImpl.this.cfHandleCubes, nioKeyBuffer, nioValueBuffer);
                 }
             });
+
+            RocksMC.LOGGER.debug("executing batch write with {} column(s) and {} cube(s), totalling {}", columns.size(), cubes.size(), RocksMCUtils.formatSize(dst.getDataSize()));
 
             //write to db
             this.db.write(WRITE_OPTIONS, dst);
