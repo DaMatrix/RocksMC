@@ -26,10 +26,12 @@ import net.minecraftforge.common.config.ConfigManager;
 import net.minecraftforge.fml.client.event.ConfigChangedEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import org.rocksdb.BlockBasedTableConfig;
 import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.CompressionType;
 import org.rocksdb.DBOptions;
 import org.rocksdb.Env;
+import org.rocksdb.LRUCache;
 
 /**
  * RocksCC configuration.
@@ -197,6 +199,30 @@ public class RocksMCConfig {
         public int tableSizeBase = 65536;
 
         @Config.Comment({
+                "The target size for uncompressed data blocks (in KiB).",
+                "Larger values will yield a better data compression ratio at the cost of increased memory requirements for the cache.",
+                "Default: 1MiB (1024 KiB)"
+        })
+        @Config.RangeInt(min = 1)
+        public int dataBlockSize = 1024;
+
+        @Config.Comment({
+                "The size of the uncompressed data cache (in MiB).",
+                "If 0, this will be determined automatically.",
+                "Default: 0"
+        })
+        @Config.RangeInt(min = 0)
+        public int cacheSize = 0;
+
+        @Config.Comment({
+                "log2() of the number of entries to split the uncompressed data cache into.",
+                "Decreasing this will reduce the cache size (if the cache size is automatic), but may hurt performance.",
+                "Default: 6"
+        })
+        @Config.RangeInt(min = 1)
+        public int cacheShardBits = 6;
+
+        @Config.Comment({
                 "The target file size multiplier for SST files at levels 2 and above.",
                 "For example, using tableSizeBase=1MiB and tableSizeMultiplier=2, level-1 SSTs will be ~1MiB, level-2 SSTs ~2MiB, level-3 SSTs ~4MiB, and so on.",
                 "Default: 1 (SSTs are the same size at all levels)"
@@ -257,6 +283,11 @@ public class RocksMCConfig {
                                 .setMinWriteBufferNumberToMerge(this.minWriteBufferNumberToMerge == 0 ? this.parallelism : this.minWriteBufferNumberToMerge)
                                 .setCompressionType(this.compression)
                                 .setTargetFileSizeBase((long) this.tableSizeBase << 10L)
+                                .setTableFormatConfig(new BlockBasedTableConfig()
+                                        .setBlockSize((long) this.dataBlockSize << 10L)
+                                        .setBlockCache(new LRUCache(
+                                                this.cacheSize == 0 ? ((long) this.dataBlockSize << 11L) * (1L << this.cacheShardBits) : (long) this.cacheSize << 20L,
+                                                this.cacheShardBits)))
                                 .setTargetFileSizeMultiplier(this.tableSizeMultiplier));
             }
             return options;
