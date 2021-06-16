@@ -181,7 +181,7 @@ public class LocalStorageImpl implements IBinaryCubeStorage {
             PositionSerializerUtils.writeColumnPos(key, pos);
 
             //load from db
-            value = read(this.db, this.cfHandleCubes, key);
+            value = read(this.db, this.cfHandleColumns, key);
             return value != null ? NBTSerializerUtils.readNBT(value) : null;
         } catch (RocksDBException e) {
             throw new IOException(e); //rethrow

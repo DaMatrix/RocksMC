@@ -124,15 +124,15 @@ public class RocksMCConfig {
 
         @Config.Comment({
                 "Whether or not to use memory-mapped I/O for reads.",
-                "Default: false"
+                "Default: true"
         })
-        public boolean mmapReads = false;
+        public boolean mmapReads = true;
 
         @Config.Comment({
                 "Whether or not to use memory-mapped I/O for writes.",
-                "Default: false"
+                "Default: true"
         })
-        public boolean mmapWrites = false;
+        public boolean mmapWrites = true;
 
         @Config.Comment({
                 "Whether or not to hint to the operating system that access to SST files will be random.",
