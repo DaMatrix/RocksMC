@@ -269,10 +269,12 @@ public class LocalStorageImpl implements IBinaryCubeStorage {
         try {
             //encode position
             PositionSerializerUtils.writeColumnPos(buf, pos);
-            ByteBuffer nioKeyBuffer = buf.nioBuffer();
 
             //encode nbt
             NBTSerializerUtils.writeNBT(buf, nbt);
+
+            //create buffers
+            ByteBuffer nioKeyBuffer = buf.nioBuffer(0, SIZE_COLUMN_POS);
             ByteBuffer nioValueBuffer = buf.nioBuffer(buf.readerIndex() + SIZE_COLUMN_POS, buf.readableBytes() - SIZE_COLUMN_POS);
 
             RocksMC.LOGGER.debug("executing single write with 1 column, totalling {}", RocksMCUtils.formatSize(buf.readableBytes()));
@@ -292,10 +294,12 @@ public class LocalStorageImpl implements IBinaryCubeStorage {
         try {
             //encode position
             PositionSerializerUtils.writeCubePos(buf, pos);
-            ByteBuffer nioKeyBuffer = buf.nioBuffer();
 
             //encode nbt
             NBTSerializerUtils.writeNBT(buf, nbt);
+
+            //create buffers
+            ByteBuffer nioKeyBuffer = buf.nioBuffer(0, SIZE_CUBE_POS);
             ByteBuffer nioValueBuffer = buf.nioBuffer(buf.readerIndex() + SIZE_CUBE_POS, buf.readableBytes() - SIZE_CUBE_POS);
 
             RocksMC.LOGGER.debug("executing single write with 1 cube, totalling {}", RocksMCUtils.formatSize(buf.readableBytes()));
@@ -335,10 +339,12 @@ public class LocalStorageImpl implements IBinaryCubeStorage {
 
                     //encode position
                     PositionSerializerUtils.writeColumnPos(buf, pos);
-                    ByteBuffer nioKeyBuffer = buf.nioBuffer();
 
                     //encode data
                     encoder.accept(buf, nbt);
+
+                    //create buffers
+                    ByteBuffer nioKeyBuffer = buf.nioBuffer(0, SIZE_COLUMN_POS);
                     ByteBuffer nioValueBuffer = buf.nioBuffer(buf.readerIndex() + SIZE_COLUMN_POS, buf.readableBytes() - SIZE_COLUMN_POS);
 
                     dst.put(LocalStorageImpl.this.cfHandleColumns, nioKeyBuffer, nioValueBuffer);
@@ -352,10 +358,12 @@ public class LocalStorageImpl implements IBinaryCubeStorage {
 
                     //encode position
                     PositionSerializerUtils.writeCubePos(buf, pos);
-                    ByteBuffer nioKeyBuffer = buf.nioBuffer();
 
                     //encode data
                     encoder.accept(buf, nbt);
+
+                    //create buffers
+                    ByteBuffer nioKeyBuffer = buf.nioBuffer(0, SIZE_CUBE_POS);
                     ByteBuffer nioValueBuffer = buf.nioBuffer(buf.readerIndex() + SIZE_CUBE_POS, buf.readableBytes() - SIZE_CUBE_POS);
 
                     dst.put(LocalStorageImpl.this.cfHandleCubes, nioKeyBuffer, nioValueBuffer);
@@ -366,6 +374,10 @@ public class LocalStorageImpl implements IBinaryCubeStorage {
 
             //write to db
             this.db.write(WRITE_OPTIONS, dst);
+
+            for (CubePos p : cubes.keySet()) {
+                checkState(this.cubeExists(p), "failed to write cube: %s", p);
+            }
         } catch (RocksDBException e) {
             throw new IOException(e); //rethrow
         } finally {
