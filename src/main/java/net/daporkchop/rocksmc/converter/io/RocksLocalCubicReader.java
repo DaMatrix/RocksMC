@@ -80,10 +80,10 @@ public class RocksLocalCubicReader extends BaseMinecraftReader<RocksLocalCubicCo
                 Map<ChunkPos, IntList> chunksMap = new HashMap<>();
                 dimensions.put(entry.getKey(), chunksMap);
 
-                entry.getValue().forEachCube(cubePos -> {
+                entry.getValue().forEachCube(cubePos -> chunksMap.computeIfAbsent(cubePos.chunkPos(), chunkPos -> {
                     increment.run();
-                    chunksMap.computeIfAbsent(cubePos.chunkPos(), chunkPos -> new IntArrayList()).add(cubePos.getY());
-                });
+                    return new IntArrayList();
+                }).add(cubePos.getY()));
             }
             this.chunkList.complete(dimensions);
         } catch (UncheckedInterruptedException ignored) {

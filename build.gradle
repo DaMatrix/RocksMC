@@ -45,7 +45,7 @@ ext {
     minecraftVersion = "1.12.2"
 
     //dependency things
-    cubicchunksVersion = "f4d7d2debf"
+    cubicchunksVersion = "3481efaa66"
     cubicchunksconverterVersion = "af26e3dfe1"
     forgerocksVersion = "6.13.3-1.12.2"
     junitVersion = "4.12"
