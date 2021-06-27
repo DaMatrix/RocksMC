@@ -23,6 +23,9 @@ package net.daporkchop.rocksmc.util;
 import lombok.NonNull;
 import lombok.experimental.UtilityClass;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -33,6 +36,8 @@ public class InputUtils {
     private final Pattern UNESCAPE_PATTERN = Pattern.compile("\\\\([\\\\\\\"])");
     private final String UNESCAPE_REPLACEMENT = "$1";
 
+    private final Pattern SPLIT_ARGS_PATTERN = Pattern.compile("(?:^| )(['\\\"]?)(.*?)\\1(?= |$)");
+
     /**
      * Processes escape sequences in a quoted string.
      *
@@ -41,5 +46,25 @@ public class InputUtils {
      */
     public String unescapeQuotedString(@NonNull String quoted) {
         return UNESCAPE_PATTERN.matcher(quoted).replaceAll(UNESCAPE_REPLACEMENT); //all escape sequences other than \\ and \" are treated literally
+    }
+
+    /**
+     * Splits an argument string into individual arguments, with more or less correct handling for quotes.
+     *
+     * @param argsIn the argument string(s)
+     * @return the split arguments
+     */
+    public String[] splitQuotedArguments(@NonNull String... argsIn) {
+        List<String> results = new ArrayList<>();
+
+        Matcher matcher = SPLIT_ARGS_PATTERN.matcher(String.join(" ", argsIn));
+        while (matcher.find()) {
+            String arg = matcher.group(2);
+            if (!arg.isEmpty()) {
+                results.add(arg);
+            }
+        }
+
+        return results.toArray(new String[0]);
     }
 }

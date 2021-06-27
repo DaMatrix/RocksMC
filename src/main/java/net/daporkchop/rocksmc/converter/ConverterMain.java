@@ -35,6 +35,7 @@ import net.daporkchop.rocksmc.converter.io.RocksLocalCubicWriter;
 
 import javax.swing.WindowConstants;
 import java.awt.GraphicsEnvironment;
+import java.lang.reflect.InvocationTargetException;
 
 /**
  * Delegating main class for the converter which injects the RocksMC formats into the CubicChunksConverter registry before loading.
@@ -47,15 +48,15 @@ public class ConverterMain {
             GuiFrame.DEFAULT_CLOSE_OPERATION = WindowConstants.DISPOSE_ON_CLOSE;
         }
 
-        Registry.registerReader("RocksMC (Cubic Chunks, Local)", RocksLocalCubicReader::new, RocksLocalCubicColumnData.class);
+        Registry.registerReader("RocksMC (CubicChunks, Local)", RocksLocalCubicReader::new, RocksLocalCubicColumnData.class);
 
-        Registry.registerWriter("RocksMC (Cubic Chunks, Local)", RocksLocalCubicWriter::new, RocksLocalCubicColumnData.class);
+        Registry.registerWriter("RocksMC (CubicChunks, Local)", RocksLocalCubicWriter::new, RocksLocalCubicColumnData.class);
 
-        Registry.registerConverter("RocksMC", RocksLocalCubic2CCDataConverter::new, RocksLocalCubic2CCInfoConverter::new, RocksLocalCubicColumnData.class, CubicChunksColumnData.class, RocksLocalCubic2CCDataConverter.class);
-        Registry.registerConverter("RocksMC", CC2RocksLocalCubicDataConverter::new, CC2RocksLocalCubicInfoConverter::new, CubicChunksColumnData.class, RocksLocalCubicColumnData.class, CC2RocksLocalCubicDataConverter.class);
+        Registry.registerConverter("Default", RocksLocalCubic2CCDataConverter::new, RocksLocalCubic2CCInfoConverter::new, RocksLocalCubicColumnData.class, CubicChunksColumnData.class, RocksLocalCubic2CCDataConverter.class);
+        Registry.registerConverter("Default", CC2RocksLocalCubicDataConverter::new, CC2RocksLocalCubicInfoConverter::new, CubicChunksColumnData.class, RocksLocalCubicColumnData.class, CC2RocksLocalCubicDataConverter.class);
     }
 
-    @SneakyThrows(InterruptedException.class)
+    @SneakyThrows({ InterruptedException.class, InvocationTargetException.class })
     public static void main(String... args) {
         GuiMain.main(args);
     }

@@ -42,7 +42,7 @@ public class CommandConverter extends AbstractRocksCommand {
 
     @Override
     public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
-        sender.sendMessage(new TextComponentString("Opening converter GUI..."));
+        sender.sendMessage(new TextComponentString("Launching converter..."));
         new Thread(() -> ConverterMain.main(args)).start();
     }
 }

@@ -21,20 +21,16 @@
 package net.daporkchop.rocksmc.command;
 
 import net.daporkchop.rocksmc.RocksMC;
-import net.minecraft.command.CommandBase;
+import net.daporkchop.rocksmc.util.InputUtils;
 import net.minecraft.command.CommandException;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.math.BlockPos;
 import net.minecraftforge.server.permission.DefaultPermissionLevel;
 import net.minecraftforge.server.permission.PermissionAPI;
 
-import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 /**
  * @author DaPorkchop_
@@ -61,6 +57,11 @@ public class CommandRoot extends AbstractRocksCommand {
     @Override
     public String getUsage(ICommandSender sender) {
         return "/rocksmc";
+    }
+
+    @Override
+    public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
+        super.execute(server, sender, InputUtils.splitQuotedArguments(args));
     }
 
     @Override
